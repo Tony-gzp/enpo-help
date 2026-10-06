@@ -47,7 +47,7 @@ const jsFiles = allFiles.filter((f) => f.endsWith('.js') || f.endsWith('.cjs') |
 // Node 的 ES 模块（api/、functions/、tools/*.mjs）：用动态 import 检查（会解析所有 import）
 function isEsm(f) {
   const r = rel(f);
-  return r.startsWith('api/') || r.startsWith('functions/') || r.endsWith('.mjs');
+  return r.startsWith('api/') || r.startsWith('functions/') || r.startsWith('worker/') || r.endsWith('.mjs');
 }
 
 let syntaxBad = 0;
@@ -224,6 +224,42 @@ try {
     }
     if (!b.status) { dataBad++; err('data/seed-books.js 的 ' + b.id + ' 缺少 status'); }
   });
+
+  /* ---- 部署配置文件检查 ---- */
+  {
+    const cfgPath = path.join(ROOT, 'wrangler.jsonc');
+    if (!fs.existsSync(cfgPath)) {
+      warn('没有找到 wrangler.jsonc，Cloudflare Workers 方式部署会失败');
+    } else {
+      // JSONC：先去掉整行注释，再当普通 JSON 解析
+      const raw = fs.readFileSync(cfgPath, 'utf8');
+      const stripped = raw
+        .split('\n')
+        .filter((line) => !line.trim().startsWith('//'))
+        .join('\n');
+      try {
+        const cfg = JSON.parse(stripped);
+        if (!cfg.main) { dataBad++; err('wrangler.jsonc 缺少 main 字段'); }
+        if (!cfg.assets || cfg.assets.directory !== '.') {
+          dataBad++;
+          err('wrangler.jsonc 的 assets.directory 应该是 "."');
+        }
+        const d1 = (cfg.d1_databases || [])[0];
+        if (!d1 || d1.binding !== 'DB') {
+          dataBad++;
+          err('wrangler.jsonc 里缺少 binding 为 DB 的 d1_databases');
+        } else if (/换成|填|xxxx/i.test(d1.database_id || '')) {
+          warn('wrangler.jsonc 里的 database_id 还是占位符，部署前要换成真实的数据库 ID');
+        }
+      } catch (e) {
+        dataBad++;
+        err('wrangler.jsonc 不是合法的 JSONC：' + e.message);
+      }
+    }
+    if (!fs.existsSync(path.join(ROOT, '.assetsignore'))) {
+      warn('没有 .assetsignore，部署后 tools/ 等内部文件会被公开下载');
+    }
+  }
 
   /* ---- 建表语句是否同步 ---- */
   const schemaJs = fs.readFileSync(path.join(ROOT, 'api/schema.js'), 'utf8');

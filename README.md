@@ -189,27 +189,33 @@ node tools/dev-server.mjs
 那份教程是**单独写给完全没部署过网站的人**的，从注册账号到验证成功，
 每一步都写了「在哪里点、填什么、看到什么算成功」，还有常见卡点的排查方法。
 
-这里只给一个极简流程概览：
+这里只给一个极简流程概览（对应 Cloudflare 现在的 **Create an app** 界面）：
 
 | 步骤 | 做什么 |
 |---|---|
 | 1 | 注册 GitHub，新建仓库，把网站文件拖拽上传 |
-| 2 | 注册 Cloudflare |
-| 3 | Cloudflare → **Storage & Databases → D1** → 建一个叫 `enpo` 的数据库 |
-| 4 | Cloudflare → **Workers & Pages → Create → Pages → Connect to Git** → 选仓库 → 构建命令留空、输出目录填 `/` → 部署 |
-| 5 | 项目 **Settings → Functions → D1 database bindings** → 变量名填 `DB`，选 `enpo` |
+| 2 | 注册 Cloudflare（第一次会让你设置一个 `workers.dev` 子域名） |
+| 3 | **Storage & Databases → D1 SQL Database → Create**，建一个叫 `enpo` 的数据库，复制 **Database ID** |
+| 4 | 在 GitHub 上编辑 `wrangler.jsonc`，把 `database_id` 换成刚才复制的 ID |
+| 5 | **Workers & Pages → Create → Import a repository** → 选仓库 → Project name 保持 `enpo-help`、Build command 留空、Deploy / Preview command 保持默认 → **Deploy** |
 | 6 | 项目 **Settings → Variables and Secrets** → 加 `ADMIN_PASSWORD` = 你的口令 |
-| 7 | **Deployments → 最新一条 → ⋯ → Retry deployment**（第 5、6 步改完必须重新部署才生效） |
+| 7 | **Deployments → 最新一条 → ⋯ → Retry deployment**（第 6 步改完必须重新部署才生效） |
 | 8 | 打开 `你的网址/admin.html` 登录验证 |
+
+网址形如 `https://enpo-help.你的子域名.workers.dev`。
 
 > **建表不用你操心**：后端第一次收到请求时会自动建表，并导入 82 条初始数据。
 > 所以第 8 步第一次打开网站时会稍微慢一两秒，之后就正常了。
 >
+> **不需要在网页上单独绑定数据库**：`wrangler.jsonc` 里已经声明了绑定，
+> 部署时自动生效。
+>
 > 更安全的做法是只存哈希：把 `ADMIN_SALT` 和 `ADMIN_PASSWORD_HASH` 两个变量都配上。
 > 哈希值可以在后台「数据与设置 → 修改口令」里生成。
 >
-> 喜欢命令行的同学，仓库里有一份 `wrangler.toml.example`，
-> 改名成 `wrangler.toml` 并按里面的注释填写即可（默认不启用，不影响上面的流程）。
+> **如果你更喜欢旧的 Pages 流程**：删掉仓库里的 `wrangler.jsonc`，
+> 改用 `functions/api/[[path]].js` 作为后端入口，构建输出目录填 `/`。
+> 两条路只能选一条，详见 [部署教程.md](部署教程.md) 的附录一。
 ### 第 7 步：以后怎么更新
 
 - **改内容** → 直接在后台改，立即生效，不用做任何事；
@@ -294,13 +300,16 @@ Cloudflare Turnstile 是免费的验证码，用户**只需要点一下复选框
 改完网站跑一遍这三条，能提前发现 90% 的问题：
 
 ```powershell
-# 1. 静态检查：语法、引用、链接、数据完整性、每页是否有 noindex
+# 1. 静态检查：语法、引用、链接、数据完整性、部署配置、每页是否有 noindex
 node tools/check-site.cjs
 
-# 2. 核心算法自检：口令哈希、QQ 号加解密、数据文件语法
+# 2. 核心算法自检：口令哈希、QQ 号加解密、本地数据迁移、数据文件语法
 node tools/selftest.cjs
 
-# 3. 后端接口自检（需要先启动 node tools/dev-server.mjs）
+# 3. Worker 入口自检：模拟 Cloudflare 环境，验证自动建表、自动导入、防机器人、404
+node tools/worker-test.mjs
+
+# 4. 后端接口自检（需要先启动 node tools/dev-server.mjs）
 node tools/api-test.mjs
 ```
 
@@ -394,10 +403,11 @@ ENPO_Website/
 ├─ books-mine.html / plan-2026.html / plan-2025.html / plan-2024.html
 ├─ general-edu.html / links.html / suggest.html / admin.html / 404.html
 ├─ robots.txt          拒绝爬虫收录
-├─ _headers            安全响应头（Cloudflare Pages 会自动生效）
-├─ wrangler.toml.example  命令行部署的配置模板（默认不启用）
-├─ 部署教程.md         ★ 从零开始的上线教程（全程网页操作）
+├─ _headers            安全响应头（如果改用 Pages 会自动生效）
+├─ wrangler.jsonc      ★ Cloudflare 部署配置（只要改里面的 database_id）
+├─ .assetsignore       哪些内部文件不公开到网站上
 ├─ .nojekyll           告诉 GitHub Pages 不要用 Jekyll
+├─ 部署教程.md         ★ 从零开始的上线教程（全程网页操作）
 ├─ package.json        只是给 npm 脚本用的，不影响网站
 ├─ assets/
 │  ├─ css/style.css    全站样式（日间 / 夜间两套配色，含思维导图）
@@ -415,7 +425,8 @@ ENPO_Website/
 │     └─ pages/*.js        各页面逻辑
 ├─ data/               ★ 所有文字内容（由 Excel 生成，也可手改）
 ├─ api/                后端：路由、数据存取、表结构、初始数据
-├─ functions/          Cloudflare Pages Functions 入口
+├─ worker/             Cloudflare Worker 入口（线上真正执行的代码）
+├─ functions/          Pages 方式部署时的备用入口（用 Workers 时可忽略）
 └─ tools/              数据解析脚本 + 自检工具（不影响网站运行）
 ```
 

@@ -129,14 +129,19 @@ export function looksLikeBot(request) {
 export function sameOriginOk(request, env) {
   const origin = request.headers.get('Origin');
   const referer = request.headers.get('Referer');
-  const host = request.headers.get('Host') || '';
+  // 有些运行环境不会把 Host 作为请求头暴露出来，这时就用请求地址里的主机名兜底。
+  // 这不影响安全性：Origin 仍然必须和请求本身的地址一致。
+  let host = request.headers.get('Host') || '';
+  if (!host) {
+    try { host = new URL(request.url).host; } catch (e) { host = ''; }
+  }
   const source = origin || referer || '';
   if (!source) return env && env.ALLOW_NO_ORIGIN === '1';
   try {
     const u = new URL(source);
     if (u.host === host) return true;
     if (env && env.ALLOWED_ORIGIN && env.ALLOWED_ORIGIN.split(',').map((x) => x.trim()).includes(u.origin)) return true;
-    // 本地开发：file:// 打开时 Origin 是 "null"
+    // 本地开发：用 file:// 打开时 Origin 是 "null"
     if (u.origin === 'null' && env && env.DEV === '1') return true;
     return false;
   } catch (e) {
