@@ -1,0 +1,104 @@
+# ============================================================================
+# robots.txt —— 告诉搜索引擎和爬虫不要收录本站
+# ----------------------------------------------------------------------------
+# 本站含有同学自愿提供的联系方式等个人信息，明确不希望被搜索引擎索引，
+# 也不欢迎各类采集型爬虫抓取。
+#
+# 说明：robots.txt 是"君子协定"，正规搜索引擎会遵守，恶意爬虫不会。
+#       真正有效的个人信息保护手段是：联系方式加密 + 点击才显示（本站已内置），
+#       以及不要在本站公开手机号、住址等敏感信息。
+# ============================================================================
+
+# 默认：全部禁止抓取
+User-agent: *
+Disallow: /
+
+# ---------- 明确拒绝常见的采集 / 商业分析 / AI 训练类爬虫 ----------
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: MauiBot
+Disallow: /
+
+User-agent: Screaming Frog SEO Spider
+Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: OAI-SearchBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-Web
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+User-agent: ImagesiftBot
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+User-agent: Scrapy
+Disallow: /
+
+User-agent: python-requests
+Disallow: /
+
+User-agent: curl
+Disallow: /
+
+User-agent: wget
+Disallow: /
+
+# 不提供站点地图（本站不打算被收录）

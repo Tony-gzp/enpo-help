@@ -1,0 +1,93 @@
+[
+  {
+    "file": "index.html",
+    "desc": "欢迎页 / 免责声明",
+    "must": ["disclaimer", "网站性质", "enter-btn", "welcome__card"],
+    "mustNot": []
+  },
+  {
+    "file": "home.html",
+    "desc": "导航页",
+    "must": ["module-card__title", "site-footer", "免责声明", "hero__title"],
+    "mustNot": []
+  },
+  {
+    "file": "faq.html",
+    "desc": "常见问题",
+    "must": ["accordion__head", "常见问题", "faq-search"],
+    "mustNot": []
+  },
+  {
+    "file": "books.html",
+    "desc": "二手教材浏览",
+    "must": ["book-card", "status-pill", "book-pill", "term-pill"],
+    "mustNot": ["3191889164", "1719082564", "2256213148"]
+  },
+  {
+    "file": "books-submit.html",
+    "desc": "我要出书（选项化表单）",
+    "must": ["book-picker", "picker-group__head", "chip-row", "QQ 号", "是否已出"],
+    "mustNot": []
+  },
+  {
+    "file": "books-mine.html",
+    "desc": "我发布的",
+    "must": ["找回", "记录 ID", "claim-code"],
+    "mustNot": []
+  },
+  {
+    "file": "plan-2026.html",
+    "desc": "2026 级培养方案",
+    "must": ["选择学期", "选择专业组", "课程", "大一上", "choice-group__toggle", "主编：", "版次：", "展开查看这 4 门课程"],
+    "mustNot": []
+  },
+  {
+    "file": "plan-2025.html",
+    "desc": "2025 级培养方案",
+    "must": ["选择学期", "选择专业组", "大二上", "展开查看这 24 门课程"],
+    "mustNot": []
+  },
+  {
+    "file": "plan-2024.html",
+    "desc": "2024 级培养方案",
+    "must": ["选择学期", "选择专业组", "大三上", "展开查看这 2 门课程"],
+    "mustNot": []
+  },
+  {
+    "file": "general-edu.html",
+    "desc": "必选通识课（含思维导图）",
+    "must": ["mindmap", "mindmap__branch", "mindmap__leaf", "工程伦理类课程", "创新创业类课程",
+             "需修 2 学分", "不再计入学分", "course-name--disabled", "module-block__badges"],
+    "mustNot": ["考核方式", "选课建议", "先分清楚", "通识课 ≠ 必修课"]
+  },
+  {
+    "file": "links.html",
+    "desc": "校内网站导航",
+    "must": ["link-item", "ehall.xjtu.edu.cn", "epe.xjtu.edu.cn", "link-item__icon"],
+    "mustNot": []
+  },
+  {
+    "file": "suggest.html",
+    "desc": "意见建议（匿名）",
+    "must": ["匿名", "写下你的想法", "sg-content"],
+    "mustNot": ["sg-contact", "例如：2024 级培养方案", "教务系统上显示是"]
+  },
+  {
+    "file": "admin.html",
+    "desc": "站主后台（登录界面）",
+    "must": ["站主后台", "admin-pw"],
+    "mustNot": ["admin-tab-host"]
+  },
+  {
+    "file": "404.html",
+    "desc": "404 页面",
+    "must": ["这个页面不存在"],
+    "mustNot": []
+  },
+  {
+    "file": "tools/logic-test.html",
+    "desc": "业务逻辑自检",
+    "must": ["ALL PASS"],
+    "mustNot": ["HAS FAILURES"]
+  }
+]

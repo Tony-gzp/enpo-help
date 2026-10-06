@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>业务逻辑自检 · 能动互助站</title>
+<style>
+  body { font-family: Consolas, monospace; padding: 20px; line-height: 1.8; background: #111; color: #ddd; }
+  .pass { color: #4ecf94; }
+  .fail { color: #ff8279; font-weight: bold; }
+  h1 { font-size: 18px; }
+  #summary { font-size: 20px; font-weight: bold; margin-top: 16px; }
+</style>
+</head>
+<body data-page="logic-test">
+<h1>业务逻辑自检（离线模式）</h1>
+<p>这一页验证：提交 → 审核 → 只有本人能改状态、编辑码校验、QQ 号加密、意见建议匿名等规则。</p>
+<div id="out"></div>
+<div id="summary">running…</div>
+
+<script src="../assets/js/config.js"></script>
+<script>ENPO.config.adapter = 'local';</script>
+<script src="../assets/js/core/util.js"></script>
+<script src="../data/site.js"></script>
+<script src="../data/faq.js"></script>
+<script src="../data/links.js"></script>
+<script src="../data/general-edu.js"></script>
+<script src="../data/plans.js"></script>
+<script src="../data/book-options.js"></script>
+<script src="../data/seed-books.js"></script>
+<script src="../assets/js/core/content.js"></script>
+<script src="../assets/js/core/ui.js"></script>
+<script src="../assets/js/core/options.js"></script>
+<script>
+/* 故意先往 localStorage 里塞一份"老版本"的数据，
+   用来验证 store.js 会不会自动把它迁移成新结构（不迁移的话页面会显示成空）。 */
+(function () {
+  try {
+    localStorage.clear();
+    localStorage.setItem('enpo.dataVersion', '1');
+    localStorage.setItem('enpo.seeded', '1');
+    localStorage.setItem('enpo.books', JSON.stringify([
+      {
+        id: 'seed_bk_001', title: '高等数学（上册）', grade: '2025级',
+        status: 'available', contactBlob: 'A19fSBErDhZyGgQEHQ==',
+        review: 'approved', origin: 'seed', createdAt: 1, updatedAt: 1
+      },
+      {
+        id: 'my_old_001', title: '我自己的书', grade: '2024级',
+        status: 'sold', contactBlob: 'TExdThhbQ1xU',
+        review: 'approved', origin: 'user', createdAt: 2, updatedAt: 2, editCodeHash: ''
+      }
+    ]));
+  } catch (e) { /* 忽略 */ }
+})();
+</script>
+<script src="../assets/js/core/store.js"></script>
+<script src="../assets/js/core/guard.js"></script>
+<script>
+(function () {
+  'use strict';
+  var U = ENPO.util, S = ENPO.store;
+  var out = document.getElementById('out');
+  var pass = 0, fail = 0, failures = [];
+
+  function log(name, ok, detail) {
+    var d = document.createElement('div');
+    d.className = ok ? 'pass' : 'fail';
+    d.textContent = (ok ? 'PASS  ' : 'FAIL  ') + name + (detail && !ok ? '  → ' + detail : '');
+    out.appendChild(d);
+    if (ok) pass++; else { fail++; failures.push(name); }
+  }
+  function eq(name, actual, expected) {
+    log(name, actual === expected, '实际=' + JSON.stringify(actual) + ' 期望=' + JSON.stringify(expected));
+  }
+  function rejects(name, promise) {
+    return promise.then(function () { log(name, false, '本应失败，却成功了'); },
+      function () { log(name, true); });
+  }
+
+  function run() {
+    return ENPO.ready().then(function () {
+      eq('运行在离线模式', S.mode, 'local');
+      return S.listAllBooks();
+    }).then(function (all) {
+      /* ---------- 0. 老版本数据自动迁移 ---------- */
+      eq('老数据已迁移：82 条初始数据 + 1 条自己的记录', all.length, 83);
+      var mine = all.filter(function (b) { return b.id === 'my_old_001'; })[0];
+      log('迁移后保留了用户自己提交的记录', !!mine);
+      if (mine) {
+        eq('迁移后 terms 由 grade 转过来', (mine.terms || []).join(','), '2024级');
+        eq('迁移后 books 由 title 转过来', (mine.books || []).join(','), '我自己的书');
+        eq('迁移后 status 由 sold 转成 yes', mine.status, 'yes');
+        eq('迁移后原来的联系方式仍然可用', U.deobfuscate(mine.qqBlob), '123456789');
+      }
+      eq('数据版本号已更新', U.storage.get('dataVersion'), '2');
+      return S.deleteBook('my_old_001');
+    }).then(function () {
+      return S.listAllBooks();
+    }).then(function (all) {
+      eq('初始数据有 82 条', all.length, 82);
+      return S.listPublicBooks();
+    }).then(function (pub) {
+      eq('公开列表显示 82 条（初始数据都是已通过）', pub.length, 82);
+      var b = pub.filter(function (x) { return x.id === 'seed_bk_001'; })[0];
+      log('每条记录都带 terms / books / status',
+        !!b && Array.isArray(b.terms) && Array.isArray(b.books) && !!b.status);
+      log('公开列表不含编辑码哈希', !!b && !('editCodeHash' in b));
+      log('QQ 号是加密串（不是明文）', !!b && !!b.qqBlob && !/^\d+$/.test(b.qqBlob));
+
+      var newId = null, code = null;
+      return S.createBook({
+        qq: '123456789', major: '能动A模块', terms: ['大一上', '通识课'],
+        books: ['工科数学分析基础（上册）'], status: 'no', note: '自动化测试生成的数据'
+      }).then(function (res) {
+        newId = res.id; code = res.editCode;
+        eq('编辑码是 8 位', String(code).length, 8);
+        return S.listPublicBooks();
+      }).then(function (pub2) {
+        log('待审核的条目不出现在公开列表', !pub2.some(function (x) { return x.id === newId; }));
+        return S.lookup(newId, code);
+      }).then(function (b2) {
+        eq('新条目是待审核状态', b2.review, 'pending');
+        eq('QQ 号已加密保存', U.deobfuscate(b2.qqBlob), '123456789');
+        eq('terms 正确保存', b2.terms.join(','), '大一上,通识课');
+        return rejects('编辑码错误时无法取回', S.lookup(newId, 'WRONGXXX'));
+      }).then(function () {
+        return rejects('编辑码错误时无法修改',
+          S.updateBook(newId, { note: '黑客改名' }, { actor: 'submitter', editCode: 'WRONGXXX' }));
+      }).then(function () {
+        return S.updateBook(newId, { note: '本人修改' }, { actor: 'submitter', editCode: code });
+      }).then(function (b3) {
+        eq('本人可以修改备注', b3.note, '本人修改');
+        eq('本人改内容后会标记待复核', b3.needsReview, true);
+        return S.updateBook(newId, { review: 'approved' }, { actor: 'submitter', editCode: code });
+      }).then(function (b4) {
+        eq('本人不能自己把审核状态改成通过', b4.review, 'pending');
+        return S.updateBook(newId, { review: 'approved' }, { actor: 'owner' });
+      }).then(function (b5) {
+        eq('站主可以审核通过', b5.review, 'approved');
+        eq('审核通过后清除待复核标记', b5.needsReview, false);
+        return S.updateBook(newId, { status: 'yes' }, { actor: 'owner' });
+      }).then(function (b6) {
+        eq('站主改不动「是否已出」', b6.status, 'no');
+        return S.updateBook(newId, { status: 'contacting' }, { actor: 'submitter', editCode: code });
+      }).then(function (b7) {
+        eq('发布者本人可以改「是否已出」', b7.status, 'contacting');
+        return S.listPublicBooks();
+      }).then(function (pub3) {
+        log('审核通过后出现在公开列表', pub3.some(function (x) { return x.id === newId; }));
+        return rejects('编辑码错误时无法删除',
+          S.deleteBook(newId, { actor: 'submitter', editCode: 'WRONGXXX' }));
+      }).then(function () {
+        return S.deleteBook(newId, { actor: 'submitter', editCode: code });
+      }).then(function () {
+        return S.listAllBooks();
+      }).then(function (all2) {
+        eq('删除后回到 82 条', all2.length, 82);
+
+        return S.createSuggestion({ category: '功能建议', content: '自动化测试留言，请忽略。' });
+      }).then(function () {
+        return S.listSuggestions();
+      }).then(function (list) {
+        log('建议写入成功', list.length >= 1);
+        log('建议对象里没有联系方式字段', list.length > 0 && !('contact' in list[0]));
+        eq('建议默认未处理', list[0].handled, false);
+        return S.updateSuggestion(list[0].id, { handled: true, adminReply: '已处理' });
+      }).then(function () {
+        return S.listSuggestions();
+      }).then(function (list2) {
+        eq('建议可以标记为已处理', list2[0].handled, true);
+        return S.deleteSuggestion(list2[0].id);
+      }).then(function () {
+        return S.listSuggestions();
+      }).then(function (list3) {
+        log('建议可以删除', !list3.some(function (s) { return s.content.indexOf('自动化测试') >= 0; }));
+
+        eq('联系方式加密往返', U.deobfuscate(U.obfuscate('987654321')), '987654321');
+        eq('打码显示', U.maskText('13800001111'), '138＊＊＊＊＊＊11');
+        log('内容层能取到常见问题', !!((ENPO.content.get('faq', {}).categories) || []).length);
+        log('内容层能取到通识课模块', !!((ENPO.content.get('generalEdu', {}).modules) || []).length);
+        log('内容层能取到培养方案', !!((ENPO.content.get('plans', {}).years) || {})['2026']);
+        log('内容层能取到书籍选项', !!((ENPO.content.get('bookOptions', {}).bookGroups) || []).length);
+        log('内容层能取到图标库', !!(ENPO.content.get('iconSet', []) || []).length);
+      });
+    }).then(done).catch(function (e) {
+      log('测试过程中出现未预期的异常', false, (e && e.message) || String(e));
+      done();
+    });
+  }
+
+  function done() {
+    // 故意把这两个词拆开拼，避免脚本文本里出现完整字样干扰渲染测试
+    var ALL_PASS = ['ALL', 'PASS'].join(' ');
+    var HAS_FAIL = ['HAS', 'FAILURES'].join(' ');
+    var el = document.getElementById('summary');
+    el.textContent = fail === 0
+      ? ALL_PASS + '  (通过 ' + pass + ' 项)'
+      : HAS_FAIL + '  (通过 ' + pass + ' 项，失败 ' + fail + ' 项：' + failures.join(' / ') + ')';
+    el.className = fail === 0 ? 'pass' : 'fail';
+  }
+
+  run();
+})();
+</script>
+</body>
+</html>

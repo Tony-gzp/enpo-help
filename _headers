@@ -1,0 +1,31 @@
+# ============================================================================
+# _headers —— 安全响应头（Cloudflare Pages / Netlify 会自动识别这个文件）
+# ----------------------------------------------------------------------------
+# 【重要说明】
+#   GitHub Pages 不支持自定义响应头，这个文件在 GitHub Pages 上不会生效，
+#   但放着也不会有坏处。如果你之后改用 Cloudflare Pages 或 Netlify，
+#   这些安全设置就会自动生效。
+#
+#   即使没有这些响应头，网站依然有下面这些保护：
+#     - 所有页面都有 <meta name="robots" content="noindex, nofollow">
+#     - robots.txt 拒绝全部爬虫
+#     - 联系方式加密存储，点击才在浏览器里还原
+#     - 表单有蜜罐字段、时间陷阱、中文算术验证、频率限制
+# ============================================================================
+
+/*
+  X-Robots-Tag: noindex, nofollow, noarchive, nosnippet, noimageindex
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=()
+  Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  Cache-Control: public, max-age=3600
+
+# 数据文件不缓存，方便你更新后立刻生效
+/data/*
+  Cache-Control: public, max-age=60
+
+# HTML 不缓存
+/*.html
+  Cache-Control: public, max-age=60
